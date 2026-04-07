@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kanban App</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #080810;
+      --surface0:  #0e0e18;
+      --surface1:  #12121f;
+      --surface2:  #181828;
+      --surface3:  #1e1e32;
+      --border:    rgba(255,255,255,0.06);
+      --border-hi: rgba(255,255,255,0.10);
+      --text-1:    #e2e8f0;
+      --text-2:    #94a3b8;
+      --text-3:    #475569;
+      --accent:    #818cf8;
+    }
+
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      color: var(--text-1);
+    }
+
+    .app {
+      min-height: 100vh;
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse 60% 40% at 10% 0%, rgba(129,140,248,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 90% 100%, rgba(56,189,248,0.05) 0%, transparent 60%);
+    }
+
+    .header {
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8,8,16,0.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 19px;
+      color: #fff;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .logo-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+      margin: 0 2px;
+      display: inline-block;
+    }
+
+    .sep { width: 1px; height: 18px; background: var(--border-hi); }
+
+    .board-title-wrap {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 9px; border-radius: 7px;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .board-title-wrap:hover { background: var(--surface2); }
+    .board-title-text {
+      font-family: 'Syne', sans-serif;
+      font-size: 14px; font-weight: 700; color: var(--text-1);
+    }
+    .edit-icon { font-size: 10px; color: var(--text-3); }
+    .board-title-input {
+      font-family: 'Syne', sans-serif;
+      font-size: 14px; font-weight: 700; color: var(--text-1);
+      background: var(--surface2);
+      border: 1px solid var(--accent);
+      border-radius: 7px;
+      padding: 4px 9px; outline: none; width: 180px;
+    }
+
+    .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+    .filter-bar {
+      display: flex; align-items: center; gap: 3px;
+      background: var(--surface1);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 3px;
+    }
+    .filter-label {
+      font-size: 10px; font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 0 6px 0 4px;
+    }
+    .filter-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 12px; font-weight: 500;
+      color: var(--text-3);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .filter-btn:hover { background: var(--surface3); color: var(--text-2); }
+    .filter-pip {
+      width: 6px; height: 6px;
+      border-radius: 50%; flex-shrink: 0;
+    }
+    .filter-count {
+      background: var(--surface0);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 10px; font-weight: 600;
+      color: var(--text-3); min-width: 18px; text-align: center;
+    }
+
+    .stats { display: flex; align-items: center; gap: 12px; }
+    .stat { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-3); }
+    .stat-num { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; color: var(--text-2); }
+    .prog-track { width: 64px; height: 3px; background: var(--surface3); border-radius: 99px; overflow: hidden; }
+    .prog-fill { height: 100%; background: linear-gradient(90deg, #818cf8, #38bdf8); border-radius: 99px; transition: width 0.4s ease; }
+
+    .board {
+      display: flex; gap: 12px;
+      padding: 18px 24px 40px;
+      overflow-x: auto;
+      align-items: flex-start;
+      min-height: calc(100vh - 65px);
+      scrollbar-width: thin;
+      scrollbar-color: var(--surface3) transparent;
+    }
+    .board::-webkit-scrollbar { height: 5px; }
+    .board::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+
+    .column {
+      width: 268px; flex-shrink: 0;
+      background: var(--surface1);
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      display: flex; flex-direction: column;
+      max-height: calc(100vh - 100px);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      overflow: hidden;
+    }
+    .column.drag-over {
+      border-color: rgba(129,140,248,0.45);
+      box-shadow: 0 0 0 1px rgba(129,140,248,0.15), inset 0 0 30px rgba(129,140,248,0.03);
+    }
+
+    .col-accent-bar { height: 2px; flex-shrink: 0; }
+
+    .col-header {
+      padding: 13px 13px 9px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .col-title-row { display: flex; align-items: center; gap: 7px; }
+    .col-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 11px; font-weight: 700;
+      color: var(--text-2);
+      text-transform: uppercase; letter-spacing: 0.07em;
+    }
+    .col-badge {
+      font-family: 'Syne', sans-serif;
+      font-size: 10px; font-weight: 700;
+      background: var(--surface3); color: var(--text-3);
+      padding: 1px 6px; border-radius: 99px;
+      transition: all 0.2s;
+    }
+    .col-badge.active { background: rgba(129,140,248,0.15); color: #818cf8; }
+    .col-add-btn {
+      width: 23px; height: 23px; border-radius: 6px;
+      background: transparent; border: 1px solid var(--border-hi);
+      color: var(--text-3); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; line-height: 1; transition: all 0.15s; flex-shrink: 0;
+    }
+    .col-add-btn:hover { background: var(--surface3); color: var(--text-2); }
+
+    .col-body {
+      padding: 2px 9px 9px;
+      overflow-y: auto; flex: 1;
+      display: flex; flex-direction: column;
+      scrollbar-width: thin;
+      scrollbar-color: var(--surface3) transparent;
+    }
+
+    .drop-zone {
+      min-height: 5px; border-radius: 8px;
+      transition: all 0.15s; flex-shrink: 0;
+    }
+    .drop-zone.active {
+      min-height: 42px;
+      background: rgba(129,140,248,0.07);
+      border: 1.5px dashed rgba(129,140,248,0.3);
+    }
+
+    .card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 10px 9px;
+      cursor: grab; transition: all 0.15s;
+      flex-shrink: 0; position: relative;
+    }
+    .card:hover {
+      border-color: var(--border-hi);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+    }
+    .card.dragging { opacity: 0.28; transform: rotate(2deg) scale(0.96); }
+    .card:active { cursor: grabbing; }
+    .card.dimmed { opacity: 0.15; pointer-events: none; filter: grayscale(0.6); }
+
+    .card-top {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 8px; margin-bottom: 9px;
+    }
+    .card-title { font-size: 13px; color: var(--text-1); font-weight: 400; line-height: 1.5; flex: 1; }
+    .card-actions { display: flex; gap: 1px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
+    .card:hover .card-actions { opacity: 1; }
+    .card-btn {
+      width: 21px; height: 21px; border-radius: 5px;
+      background: transparent; border: none;
+      color: var(--text-3); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; transition: all 0.12s;
+    }
+    .card-btn:hover { background: var(--surface3); color: var(--text-2); }
+    .card-btn.del:hover { background: rgba(248,113,113,0.12); color: #f87171; }
+
+    .card-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .card-tag { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 5px; letter-spacing: 0.03em; }
+    .priority-pill {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 600;
+      padding: 2px 7px; border-radius: 5px; border: 1px solid transparent;
+    }
+    .priority-pip { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+    .empty-col { padding: 20px 8px; text-align: center; color: var(--text-3); font-size: 12px; pointer-events: none; user-select: none; }
+    .filtered-empty { padding: 12px 8px; text-align: center; color: var(--text-3); font-size: 11px; font-style: italic; pointer-events: none; user-select: none; }
+
+    .add-form { padding: 6px 9px 9px; flex-shrink: 0; }
+    .add-input {
+      width: 100%; background: var(--surface3);
+      border: 1.5px solid #818cf8; border-radius: 9px;
+      padding: 8px 10px; color: var(--text-1);
+      font-size: 13px; font-family: 'IBM Plex Sans', sans-serif;
+      outline: none; resize: none; display: block; margin-bottom: 7px;
+      box-shadow: 0 0 0 3px rgba(129,140,248,0.08);
+    }
+    .add-input::placeholder { color: var(--text-3); }
+    .add-actions { display: flex; gap: 6px; }
+
+    .btn-primary {
+      background: #818cf8; color: #fff; border: none; border-radius: 7px;
+      padding: 6px 14px; font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;
+      transition: background 0.12s, box-shadow 0.12s;
+    }
+    .btn-primary:hover { background: #6366f1; box-shadow: 0 0 14px rgba(99,102,241,0.4); }
+
+    .btn-ghost {
+      background: transparent; color: var(--text-3);
+      border: 1px solid var(--border-hi); border-radius: 7px;
+      padding: 6px 12px; font-size: 12px;
+      cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;
+      transition: all 0.12s;
+    }
+    .btn-ghost:hover { color: var(--text-2); background: var(--surface3); }
+
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.78);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; animation: fadeIn 0.15s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+    .modal {
+      background: var(--surface1);
+      border: 1px solid var(--border-hi);
+      border-radius: 18px; padding: 24px;
+      width: 350px; max-width: 95vw;
+      animation: slideUp 0.2s ease;
+      box-shadow: 0 32px 64px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04);
+    }
+    @keyframes slideUp { from { transform: translateY(12px); opacity: 0 } to { transform: none; opacity: 1 } }
+
+    .modal-title {
+      font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+      color: var(--text-1); margin-bottom: 18px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .modal-icon {
+      width: 26px; height: 26px;
+      background: rgba(129,140,248,0.15); border-radius: 7px;
+      display: flex; align-items: center; justify-content: center; font-size: 12px;
+    }
+
+    .field { margin-bottom: 13px; }
+    .field label {
+      display: block; font-size: 10px; font-weight: 600;
+      color: var(--text-3); text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 5px;
+    }
+    .field input, .field select {
+      width: 100%; background: var(--surface2);
+      border: 1px solid var(--border-hi); border-radius: 8px;
+      padding: 8px 10px; color: var(--text-1);
+      font-size: 13px; font-family: 'IBM Plex Sans', sans-serif;
+      outline: none; transition: border-color 0.12s, box-shadow 0.12s;
+    }
+    .field input:focus, .field select:focus {
+      border-color: #818cf8; box-shadow: 0 0 0 3px rgba(129,140,248,0.1);
+    }
+    .field select option { background: var(--surface2); }
+
+    .modal-footer {
+      display: flex; gap: 8px; justify-content: flex-end;
+      margin-top: 18px; padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useRef, useEffect } = React;
+
+    const INITIAL_COLUMNS = [
+      {
+        id: "backlog", title: "Backlog", accent: "#818cf8",
+        cards: [
+          { id: "c1", title: "Pesquisar concorrentes", tag: "Research", priority: "low" },
+          { id: "c2", title: "Definir escopo do MVP", tag: "Planning", priority: "high" },
+          { id: "c3", title: "Criar wireframes iniciais", tag: "Design", priority: "medium" },
+        ],
+      },
+      {
+        id: "todo", title: "A Fazer", accent: "#fbbf24",
+        cards: [
+          { id: "c4", title: "Setup do ambiente de desenvolvimento", tag: "Dev", priority: "high" },
+          { id: "c5", title: "Reunião com stakeholders", tag: "Meeting", priority: "medium" },
+        ],
+      },
+      {
+        id: "inprogress", title: "Em Progresso", accent: "#38bdf8",
+        cards: [
+          { id: "c6", title: "Implementar autenticação", tag: "Dev", priority: "high" },
+          { id: "c7", title: "Design do dashboard", tag: "Design", priority: "medium" },
+        ],
+      },
+      {
+        id: "review", title: "Revisão", accent: "#c084fc",
+        cards: [
+          { id: "c8", title: "Code review do módulo de pagamentos", tag: "Dev", priority: "high" },
+        ],
+      },
+      {
+        id: "done", title: "Concluído", accent: "#34d399",
+        cards: [
+          { id: "c9", title: "Configurar CI/CD", tag: "DevOps", priority: "low" },
+          { id: "c10", title: "Documentar API v1", tag: "Docs", priority: "medium" },
+        ],
+      },
+    ];
+
+    const PRIORITIES = [
+      { key: "all",    label: "Todas",  color: "#64748b", glow: "rgba(100,116,139,0.3)" },
+      { key: "high",   label: "Alta",   color: "#f87171", glow: "rgba(248,113,113,0.35)" },
+      { key: "medium", label: "Média",  color: "#fbbf24", glow: "rgba(251,191,36,0.35)" },
+      { key: "low",    label: "Baixa",  color: "#4ade80", glow: "rgba(74,222,128,0.35)" },
+    ];
+
+    const PRIORITY_STYLES = {
+      high:   { bg: "rgba(248,113,113,0.12)", text: "#f87171", dot: "#f87171", border: "rgba(248,113,113,0.25)" },
+      medium: { bg: "rgba(251,191,36,0.12)",  text: "#fbbf24", dot: "#fbbf24", border: "rgba(251,191,36,0.25)" },
+      low:    { bg: "rgba(74,222,128,0.12)",  text: "#4ade80", dot: "#4ade80", border: "rgba(74,222,128,0.25)" },
+    };
+
+    const PRIORITY_LABELS = { high: "Alta", medium: "Média", low: "Baixa" };
+
+    const TAG_STYLES = {
+      Research: { bg: "rgba(56,189,248,0.1)",  text: "#38bdf8" },
+      Planning: { bg: "rgba(232,121,249,0.1)", text: "#e879f9" },
+      Design:   { bg: "rgba(167,139,250,0.1)", text: "#a78bfa" },
+      Dev:      { bg: "rgba(96,165,250,0.1)",  text: "#60a5fa" },
+      Meeting:  { bg: "rgba(251,191,36,0.1)",  text: "#fbbf24" },
+      DevOps:   { bg: "rgba(52,211,153,0.1)",  text: "#34d399" },
+      Docs:     { bg: "rgba(251,146,60,0.1)",  text: "#fb923c" },
+    };
+
+    let cardCounter = 11;
+    const newId = () => `c${cardCounter++}`;
+
+    function KanbanApp() {
+      const [columns, setColumns] = useState(INITIAL_COLUMNS);
+      const [dragging, setDragging] = useState(null);
+      const [dragOver, setDragOver] = useState(null);
+      const [addingTo, setAddingTo] = useState(null);
+      const [newCardTitle, setNewCardTitle] = useState("");
+      const [editingCard, setEditingCard] = useState(null);
+      const [boardTitle, setBoardTitle] = useState("Projeto Alpha");
+      const [editingTitle, setEditingTitle] = useState(false);
+      const [filterPriority, setFilterPriority] = useState("all");
+      const inputRef = useRef(null);
+
+      useEffect(() => {
+        if (addingTo && inputRef.current) inputRef.current.focus();
+      }, [addingTo]);
+
+      const handleDragStart = (e, cardId, fromColId) => {
+        setDragging({ cardId, fromColId });
+        e.dataTransfer.effectAllowed = "move";
+      };
+
+      const handleDrop = (e, toColId, toIndex) => {
+        e.preventDefault();
+        if (!dragging) return;
+        const { cardId, fromColId } = dragging;
+        if (fromColId === toColId) {
+          setColumns(cols => cols.map(col => {
+            if (col.id !== fromColId) return col;
+            const cards = [...col.cards];
+            const from = cards.findIndex(c => c.id === cardId);
+            const [card] = cards.splice(from, 1);
+            cards.splice(toIndex > from ? toIndex - 1 : toIndex, 0, card);
+            return { ...col, cards };
+          }));
+        } else {
+          let card;
+          setColumns(cols => {
+            let updated = cols.map(col => {
+              if (col.id === fromColId) {
+                const cards = col.cards.filter(c => { if (c.id === cardId) { card = c; return false; } return true; });
+                return { ...col, cards };
+              }
+              return col;
+            });
+            return updated.map(col => {
+              if (col.id === toColId && card) {
+                const cards = [...col.cards];
+                cards.splice(toIndex, 0, card);
+                return { ...col, cards };
+              }
+              return col;
+            });
+          });
+        }
+        setDragging(null);
+        setDragOver(null);
+      };
+
+      const handleDragEnd = () => { setDragging(null); setDragOver(null); };
+
+      const addCard = (colId) => {
+        if (!newCardTitle.trim()) { setAddingTo(null); return; }
+        setColumns(cols => cols.map(col =>
+          col.id === colId ? { ...col, cards: [...col.cards, { id: newId(), title: newCardTitle.trim(), tag: "Dev", priority: "medium" }] } : col
+        ));
+        setNewCardTitle(""); setAddingTo(null);
+      };
+
+      const deleteCard = (colId, cardId) => {
+        setColumns(cols => cols.map(col =>
+          col.id === colId ? { ...col, cards: col.cards.filter(c => c.id !== cardId) } : col
+        ));
+        if (editingCard && editingCard.id === cardId) setEditingCard(null);
+      };
+
+      const updateCard = (colId, updated) => {
+        setColumns(cols => cols.map(col =>
+          col.id === colId ? { ...col, cards: col.cards.map(c => c.id === updated.id ? updated : c) } : col
+        ));
+        setEditingCard(null);
+      };
+
+      const totalCards = columns.reduce((s, c) => s + c.cards.length, 0);
+      const doneCards = (columns.find(c => c.id === "done") || {cards:[]}).cards.length;
+      const filteredTotal = filterPriority === "all" ? totalCards
+        : columns.reduce((s, c) => s + c.cards.filter(card => card.priority === filterPriority).length, 0);
+
+      return (
+        <div className="app">
+          <header className="header">
+            <div className="header-left">
+              <div className="logo">
+                kan<span className="logo-dot"></span>ban
+              </div>
+              <div className="sep"></div>
+              {editingTitle ? (
+                <input
+                  className="board-title-input"
+                  value={boardTitle}
+                  onChange={e => setBoardTitle(e.target.value)}
+                  onBlur={() => setEditingTitle(false)}
+                  onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") setEditingTitle(false); }}
+                  autoFocus
+                />
+              ) : (
+                <div className="board-title-wrap" onClick={() => setEditingTitle(true)}>
+                  <span className="board-title-text">{boardTitle}</span>
+                  <span className="edit-icon">✎</span>
+                </div>
+              )}
+            </div>
+
+            <div className="header-right">
+              <div className="filter-bar">
+                <span className="filter-label">Prioridade</span>
+                {PRIORITIES.map(p => {
+                  const count = p.key === "all"
+                    ? totalCards
+                    : columns.reduce((s, c) => s + c.cards.filter(card => card.priority === p.key).length, 0);
+                  const isActive = filterPriority === p.key;
+                  return (
+                    <button
+                      key={p.key}
+                      className="filter-btn"
+                      style={isActive ? {
+                        color: p.color,
+                        borderColor: p.color + "28",
+                        background: p.color + "10",
+                        boxShadow: "0 0 10px " + p.glow,
+                      } : {}}
+                      onClick={() => setFilterPriority(p.key)}
+                    >
+                      <span className="filter-pip" style={{
+                        background: p.color,
+                        boxShadow: isActive ? "0 0 7px " + p.color : "none"
+                      }}></span>
+                      {p.label}
+                      <span className="filter-count" style={isActive ? { background: p.color + "20", color: p.color } : {}}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="stats">
+                <div className="stat">
+                  <span className="stat-num">{filterPriority === "all" ? totalCards : filteredTotal}</span>
+                  <span>tarefas</span>
+                </div>
+                <div className="stat">
+                  <div className="prog-track">
+                    <div className="prog-fill" style={{ width: totalCards ? ((doneCards / totalCards) * 100) + "%" : "0%" }}></div>
+                  </div>
+                  <span>{totalCards ? Math.round((doneCards / totalCards) * 100) : 0}%</span>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <div className="board">
+            {columns.map(col => {
+              const isFiltered = filterPriority !== "all";
+              const visCount = isFiltered ? col.cards.filter(c => c.priority === filterPriority).length : col.cards.length;
+              return (
+                <div
+                  key={col.id}
+                  className={"column" + (dragOver && dragOver.colId === col.id ? " drag-over" : "")}
+                  onDragOver={e => { e.preventDefault(); setDragOver({ colId: col.id, index: col.cards.length }); }}
+                  onDrop={e => handleDrop(e, col.id, col.cards.length)}
+                >
+                  <div className="col-accent-bar" style={{ background: col.accent }}></div>
+                  <div className="col-header">
+                    <div className="col-title-row">
+                      <span className="col-title">{col.title}</span>
+                      <span className={"col-badge" + (isFiltered ? " active" : "")}>
+                        {isFiltered ? visCount + "/" + col.cards.length : col.cards.length}
+                      </span>
+                    </div>
+                    <button className="col-add-btn" onClick={() => setAddingTo(col.id)}>+</button>
+                  </div>
+
+                  <div className="col-body">
+                    {col.cards.length === 0 && addingTo !== col.id && (
+                      <div className="empty-col">Nenhuma tarefa</div>
+                    )}
+                    {isFiltered && col.cards.length > 0 && visCount === 0 && (
+                      <div className="filtered-empty">Sem tarefas com esta prioridade</div>
+                    )}
+
+                    {col.cards.map((card, idx) => {
+                      const visible = filterPriority === "all" || card.priority === filterPriority;
+                      const pri = PRIORITY_STYLES[card.priority];
+                      const tag = TAG_STYLES[card.tag] || { bg: "rgba(148,163,184,0.1)", text: "#94a3b8" };
+                      const isOver = dragOver && dragOver.colId === col.id && dragOver.index === idx;
+                      return (
+                        <div key={card.id}>
+                          <div
+                            className={"drop-zone" + (isOver ? " active" : "")}
+                            onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragOver({ colId: col.id, index: idx }); }}
+                            onDrop={e => handleDrop(e, col.id, idx)}
+                          ></div>
+                          <div
+                            className={"card" + (dragging && dragging.cardId === card.id ? " dragging" : "") + (!visible ? " dimmed" : "")}
+                            draggable={visible}
+                            onDragStart={e => visible && handleDragStart(e, card.id, col.id)}
+                            onDragEnd={handleDragEnd}
+                          >
+                            <div className="card-top">
+                              <div className="card-title">{card.title}</div>
+                              <div className="card-actions">
+                                <button className="card-btn" onClick={() => setEditingCard(Object.assign({}, card, { colId: col.id }))}>✎</button>
+                                <button className="card-btn del" onClick={() => deleteCard(col.id, card.id)}>✕</button>
+                              </div>
+                            </div>
+                            <div className="card-footer">
+                              <span className="card-tag" style={{ background: tag.bg, color: tag.text }}>{card.tag}</span>
+                              <span className="priority-pill" style={{ background: pri.bg, color: pri.text, borderColor: pri.border }}>
+                                <span className="priority-pip" style={{ background: pri.dot }}></span>
+                                {PRIORITY_LABELS[card.priority]}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    <div
+                      className={"drop-zone" + (dragOver && dragOver.colId === col.id && dragOver.index === col.cards.length ? " active" : "")}
+                      style={{ minHeight: 18 }}
+                      onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragOver({ colId: col.id, index: col.cards.length }); }}
+                      onDrop={e => handleDrop(e, col.id, col.cards.length)}
+                    ></div>
+                  </div>
+
+                  {addingTo === col.id && (
+                    <div className="add-form">
+                      <textarea
+                        ref={inputRef}
+                        className="add-input"
+                        rows={2}
+                        placeholder="Título da tarefa..."
+                        value={newCardTitle}
+                        onChange={e => setNewCardTitle(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addCard(col.id); }
+                          if (e.key === "Escape") { setAddingTo(null); setNewCardTitle(""); }
+                        }}
+                      />
+                      <div className="add-actions">
+                        <button className="btn-primary" onClick={() => addCard(col.id)}>Adicionar</button>
+                        <button className="btn-ghost" onClick={() => { setAddingTo(null); setNewCardTitle(""); }}>Cancelar</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {editingCard && (
+            <div className="overlay" onClick={() => setEditingCard(null)}>
+              <div className="modal" onClick={e => e.stopPropagation()}>
+                <div className="modal-title">
+                  <span className="modal-icon">✎</span>
+                  Editar tarefa
+                </div>
+                <div className="field">
+                  <label>Título</label>
+                  <input
+                    autoFocus
+                    value={editingCard.title}
+                    onChange={e => setEditingCard(c => Object.assign({}, c, { title: e.target.value }))}
+                    onKeyDown={e => e.key === "Enter" && updateCard(editingCard.colId, editingCard)}
+                  />
+                </div>
+                <div className="field">
+                  <label>Tag</label>
+                  <select value={editingCard.tag} onChange={e => setEditingCard(c => Object.assign({}, c, { tag: e.target.value }))}>
+                    {Object.keys(TAG_STYLES).map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Prioridade</label>
+                  <select value={editingCard.priority} onChange={e => setEditingCard(c => Object.assign({}, c, { priority: e.target.value }))}>
+                    <option value="high">🔴 Alta</option>
+                    <option value="medium">🟡 Média</option>
+                    <option value="low">🟢 Baixa</option>
+                  </select>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn-ghost" onClick={() => setEditingCard(null)}>Cancelar</button>
+                  <button className="btn-primary" onClick={() => updateCard(editingCard.colId, { id: editingCard.id, title: editingCard.title, tag: editingCard.tag, priority: editingCard.priority })}>
+                    Salvar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<KanbanApp />);
+  </script>
+</body>
+</html>
