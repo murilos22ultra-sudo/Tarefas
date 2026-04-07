@@ -120,7 +120,8 @@
       border-radius: 8px;
       border: 1px solid transparent;
       background: transparent;
-      font-family: 'IBM Plex Sans', sans-serif;
+
+font-family: 'IBM Plex Sans', sans-serif;
       font-size: 12px; font-weight: 500;
       color: var(--text-3);
       cursor: pointer;
@@ -228,7 +229,8 @@
       border-radius: 10px;
       padding: 11px 10px 9px;
       cursor: grab; transition: all 0.15s;
-      flex-shrink: 0; position: relative;
+
+flex-shrink: 0; position: relative;
     }
     .card:hover {
       border-color: var(--border-hi);
@@ -316,7 +318,7 @@
     }
     @keyframes slideUp { from { transform: translateY(12px); opacity: 0 } to { transform: none; opacity: 1 } }
 
-    .modal-title {
+.modal-title {
       font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
       color: var(--text-1); margin-bottom: 18px;
       display: flex; align-items: center; gap: 8px;
@@ -411,7 +413,8 @@
     const PRIORITY_LABELS = { high: "Alta", medium: "Média", low: "Baixa" };
 
     const TAG_STYLES = {
-      Research: { bg: "rgba(56,189,248,0.1)",  text: "#38bdf8" },
+
+Research: { bg: "rgba(56,189,248,0.1)",  text: "#38bdf8" },
       Planning: { bg: "rgba(232,121,249,0.1)", text: "#e879f9" },
       Design:   { bg: "rgba(167,139,250,0.1)", text: "#a78bfa" },
       Dev:      { bg: "rgba(96,165,250,0.1)",  text: "#60a5fa" },
@@ -421,19 +424,43 @@
     };
 
     let cardCounter = 11;
-    const newId = () => `c${cardCounter++}`;
+    const newId = () => c${cardCounter++};
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem("kanban_data");
+        if (saved) {
+          const data = JSON.parse(saved);
+          // Update cardCounter to avoid ID collisions
+          data.columns.forEach(col => col.cards.forEach(card => {
+            const num = parseInt(card.id.replace("c", ""));
+            if (!isNaN(num) && num >= cardCounter) cardCounter = num + 1;
+          }));
+          return data;
+        }
+      } catch(e) {}
+      return null;
+    }
 
     function KanbanApp() {
-      const [columns, setColumns] = useState(INITIAL_COLUMNS);
+      const saved = loadState();
+      const [columns, setColumns] = useState(saved ? saved.columns : INITIAL_COLUMNS);
+      const [boardTitle, setBoardTitle] = useState(saved ? saved.boardTitle : "Projeto Alpha");
       const [dragging, setDragging] = useState(null);
       const [dragOver, setDragOver] = useState(null);
       const [addingTo, setAddingTo] = useState(null);
       const [newCardTitle, setNewCardTitle] = useState("");
       const [editingCard, setEditingCard] = useState(null);
-      const [boardTitle, setBoardTitle] = useState("Projeto Alpha");
       const [editingTitle, setEditingTitle] = useState(false);
       const [filterPriority, setFilterPriority] = useState("all");
       const inputRef = useRef(null);
+
+      // Save to localStorage whenever columns or boardTitle change
+      useEffect(() => {
+        try {
+          localStorage.setItem("kanban_data", JSON.stringify({ columns, boardTitle }));
+        } catch(e) {}
+      }, [columns, boardTitle]);
 
       useEffect(() => {
         if (addingTo && inputRef.current) inputRef.current.focus();
@@ -491,7 +518,7 @@
         setNewCardTitle(""); setAddingTo(null);
       };
 
-      const deleteCard = (colId, cardId) => {
+const deleteCard = (colId, cardId) => {
         setColumns(cols => cols.map(col =>
           col.id === colId ? { ...col, cards: col.cards.filter(c => c.id !== cardId) } : col
         ));
@@ -577,9 +604,21 @@
                   <div className="prog-track">
                     <div className="prog-fill" style={{ width: totalCards ? ((doneCards / totalCards) * 100) + "%" : "0%" }}></div>
                   </div>
-                  <span>{totalCards ? Math.round((doneCards / totalCards) * 100) : 0}%</span>
+
+<span>{totalCards ? Math.round((doneCards / totalCards) * 100) : 0}%</span>
                 </div>
               </div>
+              <button
+                className="btn-ghost"
+                style={{ fontSize: 11, padding: "4px 10px" }}
+                title="Apagar todos os dados e recomeçar"
+                onClick={() => {
+                  if (confirm("Apagar tudo e recomeçar do zero?")) {
+                    localStorage.removeItem("kanban_data");
+                    location.reload();
+                  }
+                }}
+              >↺ Resetar</button>
             </div>
           </header>
 
@@ -635,7 +674,8 @@
                               <div className="card-title">{card.title}</div>
                               <div className="card-actions">
                                 <button className="card-btn" onClick={() => setEditingCard(Object.assign({}, card, { colId: col.id }))}>✎</button>
-                                <button className="card-btn del" onClick={() => deleteCard(col.id, card.id)}>✕</button>
+
+<button className="card-btn del" onClick={() => deleteCard(col.id, card.id)}>✕</button>
                               </div>
                             </div>
                             <div className="card-footer">
@@ -708,7 +748,8 @@
                 <div className="field">
                   <label>Prioridade</label>
                   <select value={editingCard.priority} onChange={e => setEditingCard(c => Object.assign({}, c, { priority: e.target.value }))}>
-                    <option value="high">🔴 Alta</option>
+
+<option value="high">🔴 Alta</option>
                     <option value="medium">🟡 Média</option>
                     <option value="low">🟢 Baixa</option>
                   </select>
